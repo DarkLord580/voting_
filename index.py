@@ -23,7 +23,7 @@ def check_status(ctx):
     db = sqlite3.connect('vote.db')
     db.row_factory = sqlite3.Row
     cursor = db.cursor()
-    cursor.execute('SELECT * FROM users WHERE username=?', (username,))
+    cursor.execute('SELECT * FROM user WHERE username=?', (username,))
     user_results = cursor.fetchall()
     db.commit()
     db.close()
@@ -40,7 +40,7 @@ def change_status(ctx, status):
     cursor = db.cursor()
 
     sql = '''
-        SELECT status FROM users WHERE username = ?
+        SELECT status FROM user WHERE username = ?
         '''
     val = (username,)
     cursor.execute( sql , val)
@@ -54,7 +54,7 @@ def change_status(ctx, status):
         
         logger.debug('change_status compare ==================== :[{}]'.format(select_status != status))
         if select_status != status:
-            sql = '''UPDATE users SET status = ?  
+            sql = '''UPDATE user SET status = ?  
                         WHERE username=? '''
             val = (status, username)
             cursor.execute( sql , val)
@@ -62,13 +62,80 @@ def change_status(ctx, status):
         
     else:
         logger.debug('change_status row_count <=0 ==================== :[{}]'.format(row_count))
-        sql = '''INSERT INTO users (username, status)
+        sql = '''INSERT INTO user (username, status)
                         VALUES(?,?)'''
         val = (username, status)
         cursor.execute( sql , val)
         logger.debug('change_status inserted ==================== :[{}]'.format(status))
     db.commit()
     db.close()
+
+def insert_title(ctx, username, user_status, title):
+   
+    vid = -1
+    if user_status == 'create':
+        db = sqlite3.connect('vote.db')
+        db.row_factory = sqlite3.Row
+        cursor = db.cursor()
+        '''checking select vote for creating'''
+
+        vote_sql = '''
+        INSERT INTO vote (username, title, create_date)
+        VALUES (?,? , datetime('now','localtime') ); 
+        '''
+        cursor.execute(vote_sql, (username, title))
+        logger.debug('insert_title ==================== :[{}]'.format(cursor.lastrowid))
+        db.commit()
+        db.close()
+        vid = cursor.lastrowid
+        change_status(ctx, f'{user_status}{cursor.lastrowid}')
+    elif 'create' in user_status:
+        vid = user_status.split("create",1)[1]
+    return vid
+    
+
+def insert_option(ctx, user_status, option_title):
+
+    logger.debug('insert_option user_status ============{}'.format(user_status))
+    if 'create' in user_status:
+        
+        vid = user_status.split("create",1)[1]
+        logger.debug('insert_option get VID ============{}'.format(vid))
+
+        db = sqlite3.connect('vote.db')
+        db.row_factory = sqlite3.Row
+        cursor = db.cursor()
+
+        
+
+        option_sql = '''
+        INSERT INTO option (vid, option_title, create_date)
+        VALUES (?,? , datetime('now','localtime')); 
+        '''
+        results = cursor.execute(option_sql, (vid, option_title))
+        db.commit()
+        db.close()
+
+def update_startdate(ctx, user_status, start_date):
+    logger.debug('update_startdate user_status ============{}'.format(user_status))
+    if 'create' in user_status:
+        
+        vid = user_status.split("create",1)[1]
+        logger.debug('update_startdate get VID ============{}'.format(vid))
+
+        db = sqlite3.connect('vote.db')
+        db.row_factory = sqlite3.Row
+        cursor = db.cursor()
+
+        startdate_sql = '''
+        UPDATE vote set start_date = ?
+        WHERE id = ?; 
+        '''
+        results = cursor.execute(startdate_sql, (start_date, vid))
+        db.commit()
+        db.close()
+
+
 
 
 @bot.event
@@ -83,6 +150,10 @@ async def on_command_error(ctx, error):
 
     if isinstance(error, commands.CommandNotFound):
         await ctx.send(f'{error}')
+
+@bot.command(pass_context = True)
+async def cookie(self, ctx):
+    await self.bot.say("@{} :cookie:".format(ctx.message.author.id))
         
 @bot.event
 async def on_member_join(member):
@@ -92,13 +163,19 @@ async def on_member_join(member):
 async def on_member_remove(member):
     logger.info(f'{member} has left the server on ' + str(date))
     
-def check_int(inputdata):
+def validate_int(inputdata):
     try:
         int(inputdata)
         return True
     except ValueError:
         return False
 
+def validate_date(date_text):
+    try:
+        datetime.datetime.strptime(date_text, '%Y-%m-%d')
+        return True
+    except ValueError:
+        raise False
 
 
 @bot.command()
@@ -112,29 +189,102 @@ async def help(ctx, *args):
     await ctx.send(menu)
 
 @bot.command()
-async def createvote(ctx, *args):
+async def create(ctx, *args):
     change_status(ctx, "create")
-    message = '''
-    Type pls createtitle to make title 
-    Type pls createoptions to make options
-    Type pls startdate to make startdate
-    Type pls enddate to make enddate
-    Type pls finish to make finish
-    Type pls quit to cancel
+    message = '''Type pls createtitle "title" to make title
+Type pls createoptions "option" to make options
+Type pls createstartdate "startdate" to make startdate
+Type pls createenddate "enddate" to make enddate
+Type pls finish to make finish
+Type pls quit to cancel
     '''
     await ctx.send(message) 
 
 @bot.command()
 async def createtitle(ctx, *args):
-    change_status(ctx, "options")
-    logger.debug('options {} arguments: {}'.format(len(args), ', '.join(args)))
-    await ctx.send('options {} arguments: {}'.format(len(args), ', '.join(args)))  
+
+    len_args = len(args)
+
+    logger.debug('createtitle ============{} arguments: {}'.format(len_args, ', '.join(args)))
+    user_status = check_status(ctx)
+    if user_status == "create":
+        username = str(ctx.message.author)
+        if len_args == 1:
+            insert_title(ctx,username, user_status, args[0])
+            await ctx.send(f'Title created: {args[0]}' )
+
+        else:
+            await ctx.send('Usage: pls createtitle "title"' )
+    elif 'create' in user_status:
+        await ctx.send('Already Done' )
+    else:
+        await ctx.send('Do "pls createvote" first!!')
+
 
 @bot.command()
 async def createoptions(ctx, *args):
-    change_status(ctx, "options")
-    logger.debug('options {} arguments: {}'.format(len(args), ', '.join(args)))
-    await ctx.send('options {} arguments: {}'.format(len(args), ', '.join(args)))  
+    len_args = len(args)
+
+    logger.debug('createoptions ============{} arguments: {}'.format(len_args, ', '.join(args)))
+    user_status = check_status(ctx)
+    logger.debug('createoptions user_status ============{} '.format(user_status))
+    
+    if user_status == "create":
+        await ctx.send('Do "pls createtitle" first!!')
+    elif 'create' in user_status:
+        insert_option(ctx,user_status,args[0])
+        await ctx.send(f'Option created: {args[0]}' )
+    else:
+        await ctx.send('Do "pls createvote" first!!')
+        
+@bot.command()
+async def createstartdate (ctx, *args):
+    len_args = len(args)
+
+    logger.debug('startdate ============{} arguments: {}'.format(len_args, ', '.join(args)))
+    user_status = check_status(ctx)
+
+    if user_status == "create":
+        await ctx.send('Do "pls createtitle" first!!')
+    elif 'create' in user_status:
+        ''' check arg[0]   validate_date'''
+        if validate_date(args[0]) == True:
+            update_startdate(ctx,user_status,args[0])
+            await ctx.send(f'Startdate updated: {args[0]}' )
+        else:
+            await ctx.send(f'Usage: pls createstartdate  "YYYY-MM-DD"' )
+
+    else:
+        await ctx.send('Do "pls createvote" first!!')
+
+
+@bot.command()
+async def createenddate (ctx, *args):
+    len_args = len(args)
+
+    logger.debug('createoptions ============{} arguments: {}'.format(len_args, ', '.join(args)))
+    user_status = check_status(ctx)
+    if user_status == "create":
+        username = str(ctx.message.author)
+        if len_args == 1:
+            insert_option(ctx,username, user_status, args[0])
+
+        else:
+            await ctx.send('Usage: pls enddate "enddate"' )
+
+    else:
+        await ctx.send('Do "pls createvote" first!!')
+
+
+@bot.command()
+async def finish (ctx, *args):
+    logger.debug('finish ============')
+    user_status = check_status(ctx)
+    if user_status == "create":
+        username = str(ctx.message.author)
+        update_finish(ctx,username)
+    else:
+        await ctx.send('Do "pls createvote" first!!')
 
 
 @bot.command()
@@ -191,9 +341,10 @@ async def on_message(message):
 async def poll(ctx, *args):
     if len(args) == 1:
         logger.info("here")
-        if check_int(args) == True:
+        if validate_int(args) == True:
             logger.info("here2")
             if check_status(ctx) == "voting":
+
                 await ctx.send(args)
             else:
                 await ctx.send("Do 'pls vote' first!")
