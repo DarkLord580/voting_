@@ -191,17 +191,17 @@ async def help(ctx, *args):
 @bot.command()
 async def create(ctx, *args):
     change_status(ctx, "create")
-    message = '''Type pls createtitle "title" to make title
-Type pls createoptions "option" to make options
-Type pls createstartdate "startdate" to make startdate
-Type pls createenddate "enddate" to make enddate
+    message = '''Type pls title "title" to make title
+Type pls options "option" to make options
+Type pls startdate "startdate" to make startdate
+Type pls enddate "enddate" to make enddate
 Type pls finish to make finish
 Type pls quit to cancel
     '''
     await ctx.send(message) 
 
 @bot.command()
-async def createtitle(ctx, *args):
+async def title(ctx, *args):
 
     len_args = len(args)
 
@@ -214,15 +214,15 @@ async def createtitle(ctx, *args):
             await ctx.send(f'Title created: {args[0]}' )
 
         else:
-            await ctx.send('Usage: pls createtitle "title"' )
+            await ctx.send('Usage: pls title "title"' )
     elif 'create' in user_status:
         await ctx.send('Already Done' )
     else:
-        await ctx.send('Do "pls createvote" first!!')
+        await ctx.send('Do "pls create" first!!')
 
 
 @bot.command()
-async def createoptions(ctx, *args):
+async def options(ctx, *args):
     len_args = len(args)
 
     logger.debug('createoptions ============{} arguments: {}'.format(len_args, ', '.join(args)))
@@ -230,36 +230,36 @@ async def createoptions(ctx, *args):
     logger.debug('createoptions user_status ============{} '.format(user_status))
     
     if user_status == "create":
-        await ctx.send('Do "pls createtitle" first!!')
+        await ctx.send('Do "pls title" first!!')
     elif 'create' in user_status:
         insert_option(ctx,user_status,args[0])
         await ctx.send(f'Option created: {args[0]}' )
     else:
-        await ctx.send('Do "pls createvote" first!!')
+        await ctx.send('Do "pls create" first!!')
         
 @bot.command()
-async def createstartdate (ctx, *args):
+async def startdate (ctx, *args):
     len_args = len(args)
 
     logger.debug('startdate ============{} arguments: {}'.format(len_args, ', '.join(args)))
     user_status = check_status(ctx)
 
     if user_status == "create":
-        await ctx.send('Do "pls createtitle" first!!')
+        await ctx.send('Do "pls title" first!!')
     elif 'create' in user_status:
         ''' check arg[0]   validate_date'''
         if validate_date(args[0]) == True:
             update_startdate(ctx,user_status,args[0])
             await ctx.send(f'Startdate updated: {args[0]}' )
         else:
-            await ctx.send(f'Usage: pls createstartdate  "YYYY-MM-DD"' )
+            await ctx.send(f'Usage: pls startdate  "YYYY-MM-DD"' )
 
     else:
-        await ctx.send('Do "pls createvote" first!!')
+        await ctx.send('Do "pls create" first!!')
 
 
 @bot.command()
-async def createenddate (ctx, *args):
+async def enddate (ctx, *args):
     len_args = len(args)
 
     logger.debug('createoptions ============{} arguments: {}'.format(len_args, ', '.join(args)))
@@ -273,7 +273,7 @@ async def createenddate (ctx, *args):
             await ctx.send('Usage: pls enddate "enddate"' )
 
     else:
-        await ctx.send('Do "pls createvote" first!!')
+        await ctx.send('Do "pls create" first!!')
 
 
 @bot.command()
@@ -284,7 +284,7 @@ async def finish (ctx, *args):
         username = str(ctx.message.author)
         update_finish(ctx,username)
     else:
-        await ctx.send('Do "pls createvote" first!!')
+        await ctx.send('Do "pls create" first!!')
 
 
 @bot.command()
