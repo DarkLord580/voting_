@@ -232,8 +232,11 @@ async def options(ctx, *args):
     if user_status == "create":
         await ctx.send('Do "pls title" first!!')
     elif 'create' in user_status:
-        insert_option(ctx,user_status,args[0])
-        await ctx.send(f'Option created: {args[0]}' )
+        if len_args == 1:
+            insert_option(ctx,user_status,args[0])
+            await ctx.send(f'Option created: {args[0]}' )
+        else: 
+            await ctx.send('Usage: pls options "title" ')
     else:
         await ctx.send('Do "pls create" first!!')
         
@@ -248,11 +251,15 @@ async def startdate (ctx, *args):
         await ctx.send('Do "pls title" first!!')
     elif 'create' in user_status:
         ''' check arg[0]   validate_date'''
-        if validate_date(args[0]) == True:
-            update_startdate(ctx,user_status,args[0])
-            await ctx.send(f'Startdate updated: {args[0]}' )
-        else:
-            await ctx.send(f'Usage: pls startdate  "YYYY-MM-DD"' )
+        if len_args == 1:
+        
+            if validate_date(args[0]) == True:
+                update_startdate(ctx,user_status,args[0])
+                await ctx.send(f'Startdate updated: {args[0]}' )
+            else:
+                await ctx.send(f'Usage: pls startdate  "YYYY-MM-DD"' )
+        else: 
+             await ctx.send('Usage: pls startdate "time" ')
 
     else:
         await ctx.send('Do "pls create" first!!')
@@ -262,7 +269,7 @@ async def startdate (ctx, *args):
 async def enddate (ctx, *args):
     len_args = len(args)
 
-    logger.debug('createoptions ============{} arguments: {}'.format(len_args, ', '.join(args)))
+    logger.debug('enddate ============{} arguments: {}'.format(len_args, ', '.join(args)))
     user_status = check_status(ctx)
     if user_status == "create":
         username = str(ctx.message.author)
